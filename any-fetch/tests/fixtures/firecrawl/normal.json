@@ -1,0 +1,14 @@
+{
+  "status": 200,
+  "body": {
+    "success": true,
+    "data": {
+      "markdown": "page sentinel-body-text",
+      "metadata": {
+        "title": "Title sentinel-body-text",
+        "sourceURL": "https://example.com/",
+        "statusCode": 200
+      }
+    }
+  }
+}

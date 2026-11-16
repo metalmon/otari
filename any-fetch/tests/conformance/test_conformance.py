@@ -75,6 +75,11 @@ SCENARIOS: dict[str, dict[Case, Scenario]] = {
         "error": Scenario({"error": "http_status", "error_status": 404}),
         "in_body_error": Scenario({"in_body_error": "crawl_not_found"}),
     },
+    "firecrawl": {
+        "normal": Scenario(handler=_replay("firecrawl", "normal")),
+        "empty": Scenario(handler=_replay("firecrawl", "empty")),
+        "error": Scenario(handler=_replay("firecrawl", "error")),
+    },
     "tabstack": {
         "normal": Scenario(handler=_replay("tabstack", "normal")),
         "empty": Scenario(handler=_replay("tabstack", "empty")),
@@ -102,14 +107,19 @@ TIMEOUT = 7.5
 def _keys(monkeypatch: pytest.MonkeyPatch) -> None:
     """Give every provider that reads a key from the environment a fake one, never the developer's own.
 
-    A base URL in the developer's environment is cleared too, so each provider runs on its default.
+    A base URL in the developer's environment is replaced too, never used: a provider that has a
+    default runs on it, and one that has none — a self-hosted provider, which has no public address
+    to fall back to — runs on a fake one, so it is exercised like the rest.
     """
     for provider in PROVIDERS:
         metadata = AnyFetch.get_provider_metadata(provider)
         if metadata.env_key:
             monkeypatch.setenv(metadata.env_key, "conformance-key")
         if metadata.env_api_base:
-            monkeypatch.delenv(metadata.env_api_base, raising=False)
+            if metadata.requires_api_base:
+                monkeypatch.setenv(metadata.env_api_base, "https://conformance.invalid")
+            else:
+                monkeypatch.delenv(metadata.env_api_base, raising=False)
 
 
 def _scenario(provider: str, case: Case) -> Scenario:
