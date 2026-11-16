@@ -254,6 +254,22 @@ def test_a_key_served_search_advertises_only_the_canonical_type(
     assert (web_search["available"], web_search["accepted_types"]) == (True, ["otari_web_search"])
 
 
+def test_direct_available_answers_for_the_direct_endpoints_alongside_the_in_loop_one(
+    client: TestClient, api_key_header: dict[str, str]
+) -> None:
+    """A client that proxies `POST /v1/search` or `/v1/fetch` reads `direct_available`, not `available`.
+
+    The two are separate request paths, so discovery answers for both. A tool the caller
+    cannot reach either way says so in both fields, with one `reason` for the pair.
+    """
+    tools = _tools(client, api_key_header)
+
+    for tool_id in ("otari_web_search", "otari_web_fetch"):
+        tool = tools[tool_id]
+        assert "direct_available" in tool, tool_id
+        assert tool["direct_available"] is (tool["reason"] is None), tool_id
+
+
 def _add_default_key(client: TestClient, master_key_header: dict[str, str], **key: Any) -> str:
     keys = f"{API_ROOT}/organizations/me/web-search-keys"
     created = client.post(keys, json=key, headers=master_key_header)

@@ -5,6 +5,12 @@ execute?". Without it the contract is undiscoverable: a client has to read the
 docs to learn that ``otari_web_search`` exists, and cannot tell whether this
 deployment has a backend wired up for it.
 
+A tool has two ways in: declared in ``tools[]`` for a model to call mid-completion,
+or invoked straight through its own endpoint (``POST /api/v1/search``,
+``POST /api/v1/fetch``). Those are separate request paths, so an entry answers for
+both — ``available`` for the first, ``direct_available`` for the second — and a
+client that proxies a search or fetch API reads the one it actually uses.
+
 Each entry reports the declaration forms this deployment actually honors right
 now, so the answer changes with configuration: interception adds the
 provider-named web-search keywords, and a tool with no backend URL is listed as
@@ -74,6 +80,14 @@ class ManagedTool(BaseModel):
             "and its organization can pay for what the tool runs on the deployment's account. "
             "A master key or a dashboard session gets the deployment's answer alone. A "
             "request declaring an unavailable tool is refused."
+        )
+    )
+    direct_available: bool = Field(
+        description=(
+            "Whether this caller may invoke the tool through its direct endpoint — `POST /v1/search` "
+            "for web search, `POST /v1/fetch` for web fetch — rather than declaring it in `tools[]` for "
+            "a model to call mid-completion. The two are separate request paths, so a client that "
+            "proxies a search or fetch API asks this one; `reason` explains a `false` for either."
         )
     )
     reason: ToolUnavailableReason | None = Field(
@@ -174,6 +188,7 @@ def _managed_tools(config: GatewayConfig, switches: _WorkspaceSwitches) -> list[
             id=Tool.WEB_FETCH,
             description=web_fetch["description"],
             available=fetch_reason is None,
+            direct_available=fetch_reason is None,
             reason=fetch_reason,
             accepted_types=[str(Tool.WEB_FETCH)],
             input_schema=web_fetch["parameters"],
@@ -183,6 +198,7 @@ def _managed_tools(config: GatewayConfig, switches: _WorkspaceSwitches) -> list[
             id=Tool.WEB_SEARCH,
             description=web_search["description"],
             available=search_reason is None,
+            direct_available=search_reason is None,
             reason=search_reason,
             # Admission claims a provider's own search keywords only for a deployment that searches itself.
             accepted_types=web_search_declaration_forms(config) if deployment_searches else [str(Tool.WEB_SEARCH)],
@@ -193,6 +209,7 @@ def _managed_tools(config: GatewayConfig, switches: _WorkspaceSwitches) -> list[
             id=Tool.CODE_EXECUTION,
             description=code_execution["description"],
             available=code_reason is None,
+            direct_available=code_reason is None,
             reason=code_reason,
             accepted_types=(
                 code_execution_declaration_forms(config) if sandbox_configured else [str(Tool.CODE_EXECUTION)]
