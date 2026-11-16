@@ -35,6 +35,11 @@ class ProviderHttp:
         self._own_client: httpx.AsyncClient | None = None
         self._timeout = timeout
 
+    @property
+    def timeout(self) -> float:
+        """Seconds this client waits, for a provider whose API takes a deadline of its own."""
+        return self._timeout
+
     async def request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
         """Send one request.
 

@@ -47,8 +47,11 @@ from any_fetch._api import AnyFetch
 from any_fetch._errors import ProviderError
 from any_fetch._types import FetchedPage, OptionSpec, ProviderMetadata
 
-# Firecrawl's own default is 30 s, which a browser render can exceed on a heavy page.
-_DEFAULT_TIMEOUT_MS = 60_000
+# Firecrawl gives up at its own `timeout` and answers; the adapter would rather have
+# that answer than a dead connection, so it asks for slightly less than it will wait.
+# Asking for MORE is the bug this guards: the client cuts the connection first and the
+# page is lost either way, with nothing to report but a transport failure.
+_TIMEOUT_HEADROOM_S = 2.0
 
 
 class FirecrawlProvider(AnyFetch):
@@ -111,7 +114,7 @@ class FirecrawlProvider(AnyFetch):
         payload: dict[str, Any] = {
             "url": url,
             "formats": ["markdown"],
-            "timeout": _DEFAULT_TIMEOUT_MS,
+            "timeout": max(int((self._http.timeout - _TIMEOUT_HEADROOM_S) * 1000), 1_000),
             **options,
         }
 

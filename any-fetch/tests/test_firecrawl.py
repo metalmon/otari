@@ -8,6 +8,7 @@ import httpx
 import pytest
 
 from any_fetch import AnyFetch, FetchedPage, MissingCredentialError, ProviderError
+from any_fetch._api import DEFAULT_TIMEOUT
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "firecrawl"
 KEY = "00000000-0000-0000-0000-000000000000"
@@ -113,6 +114,14 @@ async def test_a_page_firecrawl_could_not_extract_is_empty_text_rather_than_an_e
 async def test_cuts_the_text_at_max_chars_and_says_so() -> None:
     page, _ = await _fetch(max_chars=4)
     assert (page.text, page.text_truncated) == ("page", True)
+
+
+@pytest.mark.asyncio
+async def test_asks_firecrawl_for_less_time_than_the_client_will_wait() -> None:
+    """Asking for more would have the client cut the connection first, losing the answer."""
+    _, request = await _fetch()
+    asked_ms = _payload(request)["timeout"]
+    assert 0 < asked_ms < DEFAULT_TIMEOUT * 1000
 
 
 @pytest.mark.asyncio
