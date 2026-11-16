@@ -24,6 +24,7 @@ names nothing, and several search instances with no default between them.
 """
 
 import copy
+import ipaddress
 import math
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
@@ -170,16 +171,52 @@ def instance_name_problems(name: str) -> list[str]:
     return problems
 
 
+# Hosts a key may travel to in the clear: the request never leaves the machine or
+# the private network it was issued on.
+_PRIVATE_SUFFIXES = (".internal", ".local", ".localhost")
+
+
+def _is_private_host(host: str) -> bool:
+    """Whether ``host`` cannot be a public address, judged by name alone.
+
+    Name alone, because this runs at configuration load: a container name resolves
+    only once the network is up, and a deployment must not need DNS to start. The
+    test is therefore conservative — a name that could be public is treated as
+    public — and it answers true for three shapes a public address cannot take: a
+    loopback or private IP literal, a bare name with no dot, which on a container
+    network is a service name, and the suffixes reserved for private use.
+    """
+    host = host.strip().rstrip(".").lower()
+    if not host:
+        return False
+    try:
+        address = ipaddress.ip_address(host.strip("[]"))
+    except ValueError:
+        return "." not in host or host.endswith(_PRIVATE_SUFFIXES)
+    return address.is_private or address.is_loopback or address.is_link_local or address.is_reserved
+
+
 def _validate_transport(section: str, name: str, api_base: Any, api_key: Any) -> None:
+    """Refuse a key sent in the clear, unless it cannot leave the private network.
+
+    A self-hosted backend is the reason for the exception: a gateway and its search
+    or fetch service on one container network, or one machine, have no certificate
+    to present each other, and requiring https would rule out every provider that
+    needs a key — which is what `provider_allow_private_hosts` already declines to
+    do elsewhere, for the same home-lab reason. A public endpoint still has to be
+    https: there the key would cross networks the deployment does not control.
+    """
     if not api_key or not str(api_base or "").strip():
         return
     try:
-        scheme = urlsplit(str(api_base).strip()).scheme.lower()
+        parts = urlsplit(str(api_base).strip())
+        scheme, host = parts.scheme.lower(), parts.hostname or ""
     except ValueError:
-        scheme = ""
-    if scheme != "https":
-        msg = f"{section}.{name}.api_base must use https when api_key is set."
-        raise ValueError(msg)
+        scheme, host = "", ""
+    if scheme == "https" or (scheme == "http" and _is_private_host(host)):
+        return
+    msg = f"{section}.{name}.api_base must use https when api_key is set, unless it is a private address."
+    raise ValueError(msg)
 
 
 def validate_search_tool_transport(name: str, api_base: Any, api_key: Any) -> None:
