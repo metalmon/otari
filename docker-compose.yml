@@ -254,6 +254,82 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # ----------------------------------------------------------------------------
+  # Fork: Firecrawl, the only self-hosted fetch backend that runs a page's scripts.
+  #
+  # `builtin_fetch` returns an empty document for anything that draws itself with
+  # JavaScript, and the providers that do render — tabstack, exa — are hosted services
+  # with no container to run and no address a closed deployment can reach. This group
+  # closes that gap: four containers behind one profile, started with
+  #     docker compose --profile web-fetch up -d
+  # and named in config.yml as
+  #     fetch_tools:
+  #       pages:
+  #         provider: firecrawl
+  #         api_base: "http://firecrawl:3002"
+  #         api_key: "<any uuid — Firecrawl Simple keeps no key store>"
+  #         timeout: 120
+  #
+  # The images are published rather than built here: their sources live in
+  # github.com/metalmon/firecrawl-simple, a fork of devflowinc/firecrawl-simple with
+  # the hosted extras removed.
+  # ----------------------------------------------------------------------------
+
+  firecrawl:
+    profiles: ["web-fetch"]
+    image: docker.io/metalmon/firecrawl-api:latest
+    depends_on:
+      - firecrawl-redis
+      - firecrawl-browser
+    ports:
+      # Bound to localhost only, as searxng and sandbox are: Otari reaches this over
+      # the Docker network at `firecrawl:3002`, and the host mapping is for ad-hoc curl.
+      - "127.0.0.1:3002:3002"
+    environment:
+      - REDIS_URL=redis://firecrawl-redis:6379
+      - REDIS_RATE_LIMIT_URL=redis://firecrawl-redis:6379
+      - PLAYWRIGHT_MICROSERVICE_URL=http://firecrawl-browser:3000/scrape
+      - PORT=3002
+      - HOST=0.0.0.0
+      - LOGGING_LEVEL=${FIRECRAWL_LOG_LEVEL:-INFO}
+    command: ["pnpm", "run", "start:production"]
+    restart: unless-stopped
+
+  firecrawl-worker:
+    profiles: ["web-fetch"]
+    image: docker.io/metalmon/firecrawl-api:latest
+    depends_on:
+      - firecrawl-redis
+      - firecrawl-browser
+      - firecrawl
+    environment:
+      - REDIS_URL=redis://firecrawl-redis:6379
+      - REDIS_RATE_LIMIT_URL=redis://firecrawl-redis:6379
+      - PLAYWRIGHT_MICROSERVICE_URL=http://firecrawl-browser:3000/scrape
+      - PORT=3002
+      - HOST=0.0.0.0
+      - LOGGING_LEVEL=${FIRECRAWL_LOG_LEVEL:-INFO}
+    command: ["pnpm", "run", "workers"]
+    restart: unless-stopped
+
+  # The browser. Drives Ulixee Hero, which brings its own Chrome — the image carries
+  # exactly one, and nothing it does not open.
+  firecrawl-browser:
+    profiles: ["web-fetch"]
+    image: docker.io/metalmon/firecrawl-browser:latest
+    environment:
+      - PORT=3000
+      - MAX_CONCURRENCY=${FIRECRAWL_MAX_CONCURRENCY:-2}
+    restart: unless-stopped
+
+  # Firecrawl's own queue. Separate from anything else here: it holds scrape jobs, not
+  # application state, and is expected to be empty between runs.
+  firecrawl-redis:
+    profiles: ["web-fetch"]
+    image: docker.io/redis:alpine
+    command: redis-server --bind 0.0.0.0
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   seaweedfs_data:
