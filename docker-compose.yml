@@ -292,7 +292,9 @@ services:
       - PORT=3002
       - HOST=0.0.0.0
       - LOGGING_LEVEL=${FIRECRAWL_LOG_LEVEL:-INFO}
-    command: ["pnpm", "run", "start:production"]
+    # The compiled entrypoint. The package's `start:production` runs `tsc` first, which
+    # would mean shipping the TypeScript compiler in the runtime image for no reason.
+    command: ["node", "dist/src/index.js"]
     restart: unless-stopped
 
   firecrawl-worker:
@@ -309,7 +311,9 @@ services:
       - PORT=3002
       - HOST=0.0.0.0
       - LOGGING_LEVEL=${FIRECRAWL_LOG_LEVEL:-INFO}
-    command: ["pnpm", "run", "workers"]
+    # Likewise: the package's `workers` script runs through nodemon and ts-node — a
+    # development loop. This is the built worker.
+    command: ["node", "dist/src/services/queue-worker.js"]
     restart: unless-stopped
 
   # The browser. Drives Ulixee Hero, which brings its own Chrome — the image carries
