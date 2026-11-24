@@ -63,6 +63,7 @@
 
 * [Self-hosted quickstart](self-hosted-quickstart.md)
 * [Deployment](deployment.md)
+* [What this fork changes](fork.md)
 * [Configuration](configuration.md)
 * [Sign-in and accounts](sign-in.md)
 * [OAuth apps](oauth-apps.md)
