@@ -111,6 +111,21 @@ async def test_a_page_firecrawl_could_not_extract_is_empty_text_rather_than_an_e
 
 
 @pytest.mark.asyncio
+async def test_a_page_the_site_refused_is_an_error_even_though_firecrawl_reports_success() -> None:
+    """Firecrawl answers 200 with `success: true` for a page the site refused, and puts the
+    refusal in the metadata — so a block reads as an empty page unless the metadata is read."""
+    answer = {
+        "success": True,
+        "data": {"markdown": "", "metadata": {"title": "example.com", "statusCode": 401, "error": "Unauthorized"}},
+    }
+    with pytest.raises(ProviderError) as raised:
+        await _fetch(httpx.Response(200, json=answer))
+    assert raised.value.tag == "http_error"
+    # The page's own status, not the 200 the gateway received for asking.
+    assert "401" in str(raised.value)
+
+
+@pytest.mark.asyncio
 async def test_cuts_the_text_at_max_chars_and_says_so() -> None:
     page, _ = await _fetch(max_chars=4)
     assert (page.text, page.text_truncated) == ("page", True)

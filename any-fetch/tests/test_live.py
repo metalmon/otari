@@ -45,6 +45,10 @@ EXPECTED: dict[str, Expected] = {
     # DeepSeek fails the call with a 404 for any page it cannot turn into markdown.
     "deepseek": Expected(titles=True, missing_page="fails"),
     "exa": Expected(titles=True, missing_page="in_body_error"),
+    # Firecrawl answers 200 with `success: true` for a page the site refused and puts the
+    # refusal in the metadata; the adapter reads that and fails the call, so a block does
+    # not arrive looking like a page with nothing on it.
+    "firecrawl": Expected(titles=True, missing_page="fails"),
     "tabstack": Expected(titles=True, missing_page="site_page"),
 }
 

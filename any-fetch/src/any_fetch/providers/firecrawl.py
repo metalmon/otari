@@ -127,6 +127,7 @@ class FirecrawlProvider(AnyFetch):
         if not isinstance(text, str):
             raise _unexpected(response)
         metadata = _metadata(data, response)
+        _refuse_what_the_site_refused(metadata)
         return FetchedPage(
             url=url,
             # Firecrawl reports the URL as asked, so a redirect is not visible here.
@@ -177,6 +178,22 @@ def _metadata(data: dict[str, Any], response: httpx.Response) -> dict[str, Any]:
     if not isinstance(metadata, dict):
         raise _unexpected(response)
     return metadata
+
+
+def _refuse_what_the_site_refused(metadata: dict[str, Any]) -> None:
+    """Raise when the page itself was refused, which the envelope does not say.
+
+    Firecrawl answers 200 with ``success: true`` for a page it could not read, and puts
+    the page's own status in ``metadata.statusCode``. Unread, a 401 or a 404 arrives as
+    an empty document — indistinguishable from a page that genuinely has no text, which
+    is the one distinction an operator needs: nothing to read, or not allowed to read.
+
+    Only the status is reported, as everywhere else here: ``metadata.error`` is a
+    sentence the site chose, and a sentence can quote the URL.
+    """
+    status = metadata.get("statusCode")
+    if isinstance(status, int) and status >= 400:
+        raise ProviderError(FirecrawlProvider.METADATA.name, status, "http_error")
 
 
 def _title(metadata: dict[str, Any], response: httpx.Response) -> str:
