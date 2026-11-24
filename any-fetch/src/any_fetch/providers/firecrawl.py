@@ -7,11 +7,12 @@ with scripts comes back empty from ``builtin``, and the one other provider that
 renders, Tabstack, is a hosted service.
 
 Written against **Firecrawl Simple**
-(https://github.com/devflowinc/firecrawl-simple), the community fork that keeps
-the scrape API and drops the hosted extras — no LLM extraction, and a plain
-Puppeteer service in place of the proprietary browser. The request and response
-below are the ones both it and upstream Firecrawl answer, so the adapter does
-not care which of the two a deployment runs. It has no hosted service and no
+(https://github.com/metalmon/firecrawl-simple, a fork of devflowinc's), the
+community fork that keeps the scrape API and drops the hosted extras: no LLM
+extraction, and an own scrape service driving Ulixee Hero instead of the
+proprietary browser. The request and response below are the ones both it and
+upstream Firecrawl answer, so the adapter does not care which of the two a
+deployment runs. It has no hosted service and no
 public endpoint, so ``api_base`` is required and there is no default.
 
 ``formats`` is pinned to ``["markdown"]``. Firecrawl defaults to markdown AND
