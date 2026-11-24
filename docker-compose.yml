@@ -4,7 +4,10 @@ services:
     # with unreleased code should build the image locally first:
     #     docker build -t mzdotai/otari:latest .
     # Docker prefers the local image over the registry tag once it exists.
-    image: docker.io/mzdotai/otari:latest
+    # Fork: our build, which carries the Firecrawl fetch provider and the
+    # direct_available field the Volt client needs. $OTARI_IMAGE still overrides it,
+    # which is how a locally built image is tried without editing this file.
+    image: ${OTARI_IMAGE:-docker.io/metalmon/otari:latest}
 
     # If you want to use a different port, change it here and in the config.yml file.
     ports:
