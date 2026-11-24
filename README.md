@@ -116,7 +116,7 @@ Compose runs Otari with PostgreSQL. Optional profiles add the code sandbox
 and web search services:
 
 ```bash
-docker compose --profile code-exec --profile web-search up -d
+docker compose --profile code-exec --profile web-search --profile web-fetch up -d
 ```
 
 The dashboard is served at `http://localhost:8000/`. To store provider keys

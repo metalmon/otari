@@ -107,9 +107,14 @@ Compose profiles start the bundled service backends:
 ```bash
 docker compose --profile code-exec up -d
 docker compose --profile web-search up -d
+docker compose --profile web-fetch up -d
 docker compose --profile object-storage up -d
 ```
 
+- `web-fetch` runs Firecrawl — an API, its queue and worker, and the browser that
+  runs a page's scripts. Needed only when a fetch tool names the `firecrawl`
+  provider; `builtin_fetch` and the hosted providers need no container. See
+  [Web fetch](tools.md#web-fetch).
 - `object-storage` runs an S3-compatible store for uploaded files; see
   [Object storage with Docker Compose](files.md#object-storage-with-docker-compose).
 - Web search needs no container when a search tool names a licensed API, such

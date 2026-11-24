@@ -849,6 +849,17 @@ Each provider's limits are in the
   whether the plan's monthly credits are used up, so $0.001 to $0.003 a page.
   Tabstack documents up to 15 seconds a page at its default `effort` and up to
   60 at `effort: max`, so give the instance a `timeout` to match.
+- **Firecrawl** (`firecrawl`) is self-hosted, and the only provider here that both
+  runs a page's scripts and needs no outside service: `builtin_fetch` returns an
+  empty document for a page that draws itself with JavaScript, and the other two
+  that render are hosted. It has no public endpoint, so the instance must set
+  `api_base`; `api_key` is required by the protocol but a self-hosted deployment
+  keeps no key store, so any UUID does. It reports no cost — there is none to
+  report — so a fetch is billed at the instance's own `price_per_call`, which is
+  normally `0`. A browser takes its time on a heavy page, so give the instance a
+  `timeout` well above the gateway's 30-second default. Start it with
+  `docker compose --profile web-fetch up -d` and point `api_base` at
+  `http://firecrawl:3002`.
 
 ### Web search
 

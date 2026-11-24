@@ -1461,6 +1461,12 @@ fetch_tools:
     provider: exa
     api_key: "${EXA_API_KEY}"
     price_per_call: 0.001   # USD, when Exa reports no cost
+  pages:                    # self-hosted, runs the page's scripts
+    provider: firecrawl
+    api_base: "http://firecrawl:3002"
+    api_key: "00000000-0000-0000-0000-000000000000"   # any UUID; it keeps no key store
+    timeout: 120            # a browser is slower than the 30s default
+    price_per_call: 0
 web_search_default_tool: exa
 web_fetch_default_tool: builtin_fetch
 web_search_max_calls: 10
